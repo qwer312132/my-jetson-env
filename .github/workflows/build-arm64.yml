@@ -1,0 +1,36 @@
+name: Build ARM64 Docker Image for Jetson
+
+on:
+  workflow_dispatch: # 允許在 GitHub 網頁上手動觸發打包
+
+jobs:
+  build-and-export:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 取得你的專案程式碼
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 安裝 QEMU，這是讓雲端 x86 機器能編譯 ARM64 的關鍵核心
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 3. 啟用 Docker Buildx 擴充功能
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. 進行跨平台編譯並直接輸出為 .tar 壓縮檔
+      - name: Build and export ARM64 image
+        run: |
+          docker buildx build --platform linux/arm64 \
+            -t jetson-app:latest \
+            --output type=docker,dest=jetson-env.tar .
+
+      # 5. 將打包好的 .tar 檔上傳成供你下載的 Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jetson-docker-tar
+          path: jetson-env.tar
+          retention-days: 3 # 設定檔案保留天數，避免佔用你的 GitHub 空間
